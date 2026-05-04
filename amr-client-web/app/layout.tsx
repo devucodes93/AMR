@@ -25,6 +25,10 @@ const accentFont = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "ResistanceRadar Web",
   description: "Doctor and medical shop dashboard for AMR surveillance",
+  icons: [
+    { rel: 'icon', url: '/favicon.svg' },
+    { rel: 'icon', url: '/favicon.ico' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
