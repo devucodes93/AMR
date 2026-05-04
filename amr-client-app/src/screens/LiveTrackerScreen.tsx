@@ -33,6 +33,8 @@ export function LiveTrackerScreen() {
         longitude: point.longitude as number,
         radiusMeters: Math.min(2500, Math.max(700, point.score * 35)),
         severity: point.riskLevel === 'high' ? 'red' : 'amber',
+        diseaseName:
+          (point as any).diseaseName || (point as any).disease || (point as any).topDisease || undefined,
       }));
 
     return backendZones.length > 0 ? backendZones : RED_ZONES;
@@ -103,6 +105,7 @@ export function LiveTrackerScreen() {
       trackerZones.map(zone => ({
         ...zone,
         label: zone.locationLabel || zone.label,
+        diseaseName: (zone as any).diseaseName,
       })),
     );
     const centerLat = currentLocation?.latitude ?? 20.5937;
@@ -226,7 +229,9 @@ export function LiveTrackerScreen() {
               radius: zone.radiusMeters,
               weight: 2
             }).addTo(map).bindPopup(
-              '<strong>' + zone.label + '</strong><br/>Severity: ' + zone.severity.toUpperCase()
+              '<strong>' + zone.label + '</strong>' +
+                (zone.diseaseName ? '<br/>Disease: ' + zone.diseaseName : '') +
+                '<br/>Severity: ' + zone.severity.toUpperCase()
             );
           });
 
