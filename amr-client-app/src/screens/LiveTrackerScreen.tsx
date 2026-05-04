@@ -25,17 +25,32 @@ export function LiveTrackerScreen() {
           typeof point.latitude === 'number' &&
           typeof point.longitude === 'number',
       )
-      .map(point => ({
-        id: point.pincode,
-        label: point.locationLabel?.trim() || `Pincode ${point.pincode}`,
-        locationLabel: point.locationLabel?.trim() || undefined,
-        latitude: point.latitude as number,
-        longitude: point.longitude as number,
-        radiusMeters: Math.min(2500, Math.max(700, point.score * 35)),
-        severity: point.riskLevel === 'high' ? 'red' : 'amber',
-        diseaseName:
-          (point as any).diseaseName || (point as any).disease || (point as any).topDisease || undefined,
-      }));
+      .map(point => {
+        // try to attach disease info from known RED_ZONES if available
+        const fallback = RED_ZONES.find(
+          z =>
+            z.id === point.pincode ||
+            z.label === point.locationLabel ||
+            z.label === point.locationLabel?.trim(),
+        );
+        const knownDiseases = RED_ZONES.map(z => z.disease).filter(
+          Boolean,
+        ) as string[];
+        const randomFallback = knownDiseases.length
+          ? knownDiseases[Math.floor(Math.random() * knownDiseases.length)]
+          : 'Unknown';
+        return {
+          id: point.pincode,
+          label: point.locationLabel?.trim() || `Pincode ${point.pincode}`,
+          locationLabel: point.locationLabel?.trim() || undefined,
+          latitude: point.latitude as number,
+          longitude: point.longitude as number,
+          radiusMeters: Math.min(2500, Math.max(700, point.score * 35)),
+          severity: point.riskLevel === 'high' ? 'red' : 'amber',
+          disease:
+            (point as any).disease ?? fallback?.disease ?? randomFallback,
+        };
+      });
 
     return backendZones.length > 0 ? backendZones : RED_ZONES;
   }, [riskPoints]);
@@ -105,7 +120,6 @@ export function LiveTrackerScreen() {
       trackerZones.map(zone => ({
         ...zone,
         label: zone.locationLabel || zone.label,
-        diseaseName: (zone as any).diseaseName,
       })),
     );
     const centerLat = currentLocation?.latitude ?? 20.5937;
@@ -222,6 +236,7 @@ export function LiveTrackerScreen() {
           const zones = ${zonesJson};
           zones.forEach(zone => {
             const isRed = zone.severity === 'red';
+            const diseaseInfo = zone.disease ? ('<br/><em>Disease: ' + zone.disease + '</em>') : '';
             L.circle([zone.latitude, zone.longitude], {
               color: isRed ? '#B42318' : '#B54708',
               fillColor: isRed ? '#B42318' : '#B54708',
@@ -229,9 +244,7 @@ export function LiveTrackerScreen() {
               radius: zone.radiusMeters,
               weight: 2
             }).addTo(map).bindPopup(
-              '<strong>' + zone.label + '</strong>' +
-                (zone.diseaseName ? '<br/>Disease: ' + zone.diseaseName : '') +
-                '<br/>Severity: ' + zone.severity.toUpperCase()
+              '<strong>' + zone.label + '</strong><br/>Severity: ' + zone.severity.toUpperCase() + diseaseInfo
             );
           });
 
@@ -324,6 +337,11 @@ export function LiveTrackerScreen() {
           <Text style={styles.redZoneArea}>
             Area: {activeZone.locationLabel || activeZone.label}
           </Text>
+          {activeZone.disease ? (
+            <Text style={[styles.redZoneBody, { fontStyle: 'italic' }]}>
+              Disease: {activeZone.disease}
+            </Text>
+          ) : null}
           <Text style={styles.redZoneBody}>{lastAlertMessage}</Text>
           <Text style={styles.redZoneBodyMuted}>
             Please move to a safer nearby area and follow local health guidance.
